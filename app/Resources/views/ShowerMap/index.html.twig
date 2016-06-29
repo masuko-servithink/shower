@@ -1,0 +1,17 @@
+{% extends "layout.html.twig" %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="{{ asset("assets/js/map.js") }}"></script>
+{% endblock %}
+
+{% block body %}
+    <main>
+        <div id="mapWrap"><div id="map"></div></div>
+        <div id="status">
+            <p>全体件数：<span id="status_all"></span>件</p>
+            <p>bounds内件数：<span id="status_bounds"></span>件</p>
+            <ul id="status_shop"> </ul>
+        </div>
+    </main>
+{% endblock %}

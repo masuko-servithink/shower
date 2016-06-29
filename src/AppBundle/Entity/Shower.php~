@@ -1,0 +1,358 @@
+<?php
+
+namespace AppBundle\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints\DateTime;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+
+/**
+ * Shower
+ *
+ * @ORM\Table(name="shower")
+ * @ORM\Entity(repositoryClass="AppBundle\Repository\ShowerRepository")
+ * @UniqueEntity("name, address")
+ * @ORM\HasLifecycleCallbacks
+ */
+class Shower
+{
+    /**
+     * @var int
+     *
+     * @ORM\Column(name="id", type="integer")
+     * @ORM\Id
+     * @ORM\GeneratedValue(strategy="IDENTITY")
+     */
+    private $id;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="name", type="string", length=255)
+     */
+    private $name;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="address", type="string", length=255)
+     */
+    private $address;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="clean_address", type="string", length=255, nullable=true)
+     */
+    private $clean_address;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="tel", type="string", length=255, nullable=true)
+     */
+    private $tel;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="url", type="string", length=255)
+     */
+    private $url;
+
+    /**
+     * @ORM\Column(name="lat", type="decimal", precision=13, scale=10, nullable=true)
+     */
+    private $lat;
+
+    /**
+     * @ORM\Column(name="lng", type="decimal", precision=13, scale=10, nullable=true)
+     */
+    private $lng;
+
+    /**
+     * @var boolean
+     *
+     * @ORM\Column(name="is_converted", type="boolean", options={"default" = false})
+     */
+    private $is_converted;
+
+    /**
+     * @var datetime $created
+     *
+     * @ORM\Column(name="created_at", type="datetime")
+     */
+    private $created_at;
+
+    /**
+     * @var integer
+     *
+     * @ORM\Column(name="pref_id", type="integer", nullable=true)
+     * @ORM\ManyToOne(targetEntity="Prefecture")
+     * @ORM\JoinColumn(name="pref_id", referencedColumnName="id")
+     */
+    private $pref_id;
+
+    /**
+     * Get id
+     *
+     * @return int
+     */
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    /**
+     * Set name
+     *
+     * @param string $name
+     *
+     * @return Shower
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * Get name
+     *
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * Set address
+     *
+     * @param string $address
+     *
+     * @return Shower
+     */
+    public function setAddress($address)
+    {
+        $this->address = $address;
+
+        return $this;
+    }
+
+    /**
+     * Get address
+     *
+     * @return string
+     */
+    public function getAddress()
+    {
+        return $this->address;
+    }
+
+    /**
+     * Set tel
+     *
+     * @param string $tel
+     *
+     * @return Shower
+     */
+    public function setTel($tel)
+    {
+        $this->tel = $tel;
+
+        return $this;
+    }
+
+    /**
+     * Get tel
+     *
+     * @return string
+     */
+    public function getTel()
+    {
+        return $this->tel;
+    }
+
+    /**
+     * Set url
+     *
+     * @param string $url
+     *
+     * @return Shower
+     */
+    public function setUrl($url)
+    {
+        $this->url = $url;
+
+        return $this;
+    }
+
+    /**
+     * Get url
+     *
+     * @return string
+     */
+    public function getUrl()
+    {
+        return $this->url;
+    }
+
+    /**
+     * Set lat
+     *
+     * @param string $lat
+     *
+     * @return Shower
+     */
+    public function setLat($lat)
+    {
+        $this->lat = $lat;
+
+        return $this;
+    }
+
+    /**
+     * Get lat
+     *
+     * @return string
+     */
+    public function getLat()
+    {
+        return $this->lat;
+    }
+
+    /**
+     * Set lng
+     *
+     * @param string $lng
+     *
+     * @return Shower
+     */
+    public function setLng($lng)
+    {
+        $this->lng = $lng;
+
+        return $this;
+    }
+
+    /**
+     * Get lng
+     *
+     * @return string
+     */
+    public function getLng()
+    {
+        return $this->lng;
+    }
+
+    /**
+     * @ORM\PrePersist
+     */
+    public function prePersist()
+    {
+        $this->created_at = new \DateTime();
+    }
+
+    /**
+     * Get property dynamically
+     */
+    public function getDynamicProperty($key){
+        if (!property_exists($this, $key)){
+            return null;
+        }
+        return $this->{$key};
+    }
+
+    /**
+     * Set property dynamically
+     */
+    public function setDynamicProperty($key, $val){
+        if (!property_exists($this, $key)){
+            return false;
+        }
+        $this->{$key} = $val;
+        return true;
+    }
+
+    /**
+     * Set createdAt
+     *
+     * @param \DateTime $createdAt
+     *
+     * @return Shower
+     */
+    public function setCreatedAt($createdAt)
+    {
+        $this->created_at = $createdAt;
+
+        return $this;
+    }
+
+    /**
+     * Get createdAt
+     *
+     * @return \DateTime
+     */
+    public function getCreatedAt()
+    {
+        return $this->created_at;
+    }
+
+    /**
+     * Set isConverted
+     *
+     * @param boolean $isConverted
+     *
+     * @return Shower
+     */
+    public function setIsConverted($isConverted)
+    {
+        $this->is_converted = $isConverted;
+
+        return $this;
+    }
+
+    /**
+     * Get isConverted
+     *
+     * @return boolean
+     */
+    public function getIsConverted()
+    {
+        return $this->is_converted;
+    }
+
+    public function hasLatLng()
+    {
+        if (empty($this->lat) || empty($this->lng)){
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Set prefId
+     *
+     * @param integer $prefId
+     *
+     * @return Shower
+     */
+    public function setPrefId($prefId)
+    {
+        $this->pref_id = $prefId;
+
+        return $this;
+    }
+
+    /**
+     * Get prefId
+     *
+     * @return integer
+     */
+    public function getPrefId()
+    {
+        return $this->pref_id;
+    }
+}

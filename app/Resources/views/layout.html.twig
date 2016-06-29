@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <!--[if IE]>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <![endif]-->
+    <title>{% block title %} | Shower Map {% endblock %}</title>
+    {% block stylesheets %}
+        {%- include "MaterializeBundle:Materialize:css.html.twig" -%}
+        {% stylesheets filter='scssphp'
+        "assets/scss/style.scss"
+        %}
+        <link rel="stylesheet" href="{{ asset_url }}" />
+        {% endstylesheets %}
+    {% endblock %}
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCKLEXOmnNi0MlnrGKbOu0B02B05cmsKW0"></script>
+</head>
+<body >
+{% include "Common/header.html.twig" %}
+{% block body %}{% endblock %}
+{#{% include "Common/footer.html.twig" %}#}
+
+{% block javascripts %}
+    {% javascripts filter="?jsqueeze"
+    "assets/vendor/jquery-2.2.3.js"
+    "assets/vendor/markerclusterer.js"
+    "assets/js/materialize-custom.js"
+    "assets/js/prefclusterer.js"
+    %}
+    <script src="{{ asset_url }}"></script>
+    {% endjavascripts %}
+    {%- include "MaterializeBundle:Materialize:js.html.twig" -%}
+{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+# src/Acme/MailerBundle/Resources/config/services.yml
+parameters:
+#    sites where scrape to
+    onsen_nifty:
+        site_id: onsen_nifty
+        base_url: http://onsen.nifty.com
+        uri: /{pref}/search/page-{index}/
+        filters:
+            list: { filter: "div.contentHeader" }
+            header:
+                name: { filter: ".title a", text: null }
+#                thumb_img_path: { filter: img, attr: src }
+            content_url: { filter: ".title a", attr: href }
+#            content:
+#                basic_info: { filter: "ul.basicInfoList li" }
+#                tags:
+#                    get_nodes: { filter: "#the_tags span a" }
+#                    get_array: { text: null }
+
+services:
+    app.geo_converter:
+        class: AppBundle\Service\GeoConverter
+        arguments: ["@doctrine.orm.entity_manager", "@event_dispatcher"]
+    app.shower_persiter:
+        class: AppBundle\Service\ShowerPersister
+        arguments: ["@doctrine.orm.entity_manager", "@event_dispatcher"]
+    app.crawler_chain:
+        class: AppBundle\CrawlerChain
+    app.prefecture_repository:
+        class: Doctrine\ORM\EntityRepository
+        factory: ["@doctrine.orm.entity_manager", getRepository]
+        arguments:
+            - AppBundle\Entity\Prefecture
+# sites
+    app.onsen_nifty_crawler:
+        class: AppBundle\Crawler\Site\OnsenNiftyCrawler
+        arguments: ["@app.prefecture_repository", "%onsen_nifty%", "@m6web_guzzlehttp", "@event_dispatcher"]
+        tags:
+            -  { name: app.crawler }

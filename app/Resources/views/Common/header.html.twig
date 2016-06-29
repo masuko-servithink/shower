@@ -1,0 +1,42 @@
+<header class="navbar-fixed">
+    <nav >
+        <ul id="slide-out" class="side-nav fixed">
+            <li class="search">
+                <div class="input-field card cyan accent-4">
+                    <input id="search" type="search" />
+                    <label for="search"><i class="material-icons search-icon">search</i></label>
+                </div>
+            </li>
+            <li class="no-padding">
+                <a class="collapsible-header">全ての動画
+                    <i class="large material-icons">list</i>
+                </a>
+            </li>
+            <li class="no-padding">
+                <a class="collapsible-header">お気に入り
+                    <i class="large material-icons">stars</i>
+                </a>
+            </li>
+            <li class="no-padding">
+                <ul class="collapsible collapsible-accordion">
+                    <li>
+                        <a class="collapsible-header">タグ一覧<i class="large material-icons">label</i></a>
+                        <div class="collapsible-body">
+                            render(controller("AppBundle:Tag:tagList"))
+                        </div>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+        <div class="nav-wrapper cyan accent-4">
+            <a id="logo-container" href="/" class="brand-logo">
+                <img class="logo-image" src="{{ asset('assets/image/logo/Eromium-logo.png') }}">
+            </a>
+            <ul class="right hide-on-med-and-down">
+                <li><a href="#"><i class="material-icons left">stars</i>お気に入り</a></li>
+                <li><a href=""><i class="material-icons left">view_module</i>人気動画</a></li>
+            </ul>
+            <a href="#" data-activates="slide-out" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
+        </div>
+    </nav>
+</header>
