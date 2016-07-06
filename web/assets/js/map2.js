@@ -30,6 +30,7 @@ var ShowerMap = {
     boundsData:{},
     ajaxRequest: null,
     borderZoom: 8,
+    prevZoom: 0,
     mc:{},
     prefMarker:{}
 };
@@ -63,6 +64,9 @@ ShowerMap.gMapInit = function(){
 ///////////////////////////////////////////////////////////////////////
 ShowerMap.getShowers = function(url, bound){
 
+    if(ShowerMap.ajaxRequest){
+        ShowerMap.ajaxRequest.abort();
+    }
     ShowerMap.ajaxRequest = $.ajax({
         type: "GET",
         url: url,
@@ -82,8 +86,8 @@ ShowerMap.getShowers = function(url, bound){
 ///////////////////////////////////////////////////////////////////////
 // JSON読み込み
 ///////////////////////////////////////////////////////////////////////
-ShowerMap.isViewPortMarker = function(){
-    return (ShowerMap.zoom > ShowerMap.borderZoom);
+ShowerMap.isViewPortMarker = function(zoom){
+    return (zoom > ShowerMap.borderZoom);
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -97,7 +101,7 @@ ShowerMap.gMapSetIdle = function(){
         // マップサイズ取得
         ShowerMap.getMapSize();
         // json読み込み
-        if (ShowerMap.isViewPortMarker()){
+        if (ShowerMap.isViewPortMarker(ShowerMap.zoom)){
             var bounds = {
                 neLat: ShowerMap.neLat,
                 neLng: ShowerMap.neLng,
@@ -118,9 +122,13 @@ ShowerMap.gMapSetIdle = function(){
 ShowerMap.refleshMap = function() {
 
     // マーカー作成
-    if (ShowerMap.isViewPortMarker()){
+    if (ShowerMap.isViewPortMarker(ShowerMap.zoom)){
+        if (!ShowerMap.isViewPortMarker(ShowerMap.prevZoom)){
+            ShowerMap.clearMarker(ShowerMap.prefMarker);
+        }
         ShowerMap.createViewPortMarker();
     }else{
+        ShowerMap.clearMarker(ShowerMap.mc);
         ShowerMap.createPrefMarker();
     }
 
@@ -131,6 +139,7 @@ ShowerMap.refleshMap = function() {
 ///////////////////////////////////////////////////////////////////////
 ShowerMap.getMapSize = function() {
     ShowerMap.boundsLen = 0;
+    ShowerMap.prevZoom = ShowerMap.zoom;
     ShowerMap.zoom = ShowerMap.map.getZoom();
     console.log(ShowerMap.zoom);
     ShowerMap.bounds = ShowerMap.map.getBounds();
@@ -174,11 +183,18 @@ ShowerMap.setMarker = function(placeLoc) {
         id: placeLoc.id
     });
     ShowerMap.markerArr.push(marker);
+    var infoWindow = new google.maps.InfoWindow({ // 吹き出しの追加
+        content: '<div class="sample">' + placeLoc.name + '</div>' // 吹き出しに表示する内容
+    });
+    marker.addListener('click', function() { // マーカーをクリックしたとき
+        infoWindow.open(ShowerMap.map, marker); // 吹き出しの表示
+    });
+    return marker;
 };
 ///////////////////////////////////////////////////////////////////////
 // マーカー再構成
 ///////////////////////////////////////////////////////////////////////
-ShowerMap.restructMarker = function(markerArr){
+ShowerMap.ifMarkerExists = function(markerArr){
     return ShowerMap.jsonData.some(function(item, index){
         if (item.id === markerArr.id){
             ShowerMap.jsonData.splice(index,1);
@@ -192,17 +208,17 @@ ShowerMap.restructMarker = function(markerArr){
 ///////////////////////////////////////////////////////////////////////
 ShowerMap.createViewPortMarker = function() {
     for (i = ShowerMap.markerArr.length - 1; i >= 0; i -= 1) {
-        var existed = ShowerMap.restructMarker(ShowerMap.markerArr[i]);
+        var existed = ShowerMap.ifMarkerExists(ShowerMap.markerArr[i]);
         if (!existed){
-            ShowerMap.mc.removeMarker(ShowerMap.markerArr[i]);
             ShowerMap.markerArr[i].setMap(null);
             ShowerMap.markerArr.splice(i, 1);
         }
     }
+    ShowerMap.mc.clearMarkers();
     for (var n = 0, l2 = ShowerMap.jsonData.length; n < l2; n++) {
-        ShowerMap.setMarker(ShowerMap.jsonData[n]);
-        ShowerMap.mc.addMarker(marker, false);
+        var marker = ShowerMap.setMarker(ShowerMap.jsonData[n]);
     }
+    ShowerMap.mc.addMarkers(ShowerMap.markerArr, false);
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -211,10 +227,21 @@ ShowerMap.createViewPortMarker = function() {
 ShowerMap.createPrefMarker = function() {
     for (var n = 0, l2 = ShowerMap.jsonData.length; n < l2; n++) {
         ShowerMap.setMarker(ShowerMap.jsonData[n]);
-        ShowerMap.prefMarker.addMarker(marker, false);
     }
+    ShowerMap.prefMarker.addMarkers(ShowerMap.markerArr, false);
 };
 
+///////////////////////////////////////////////////////////////////////
+// マーカー作成
+///////////////////////////////////////////////////////////////////////
+ShowerMap.clearMarker = function(cluster) {
+    cluster.clearMarkers();
+    for (i = ShowerMap.markerArr.length - 1; i >= 0; i -= 1) {
+        ShowerMap.markerArr[i].setMap(null);
+    }
+    ShowerMap.markerArr = [];
+    return 0;
+};
 ///////////////////////////////////////////////////////////////////////
 // event
 ///////////////////////////////////////////////////////////////////////

@@ -31,9 +31,9 @@ class Prefecture
     /**
      * @var string
      *
-     * @ORM\Column(name="name_kanji", type="string", length=10)
+     * @ORM\Column(name="name", type="string", length=10)
      */
-    private $nameKanji;
+    private $name;
 
     /**
      * @var string
@@ -88,27 +88,27 @@ class Prefecture
     }
 
     /**
-     * Set nameKanji
+     * Set name
      *
      * @param string $nameKanji
      *
      * @return Prefecture
      */
-    public function setNameKanji($nameKanji)
+    public function setName($name)
     {
-        $this->nameKanji = $nameKanji;
+        $this->name = $name;
 
         return $this;
     }
 
     /**
-     * Get nameKanji
+     * Get name
      *
      * @return string
      */
-    public function getNameKanji()
+    public function getName()
     {
-        return $this->nameKanji;
+        return $this->name;
     }
 
     /**

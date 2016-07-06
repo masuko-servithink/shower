@@ -30,7 +30,7 @@ class ShowerRepository extends \Doctrine\ORM\EntityRepository
     public function findAllByPrefs(){
 
         $query = $this->createQueryBuilder('s')
-            ->select('p.nameKanji', 'p.lat', 'p.lng', 'count(s.id)')
+            ->select('p.name', 'p.lat', 'p.lng', 'count(s.id)')
             ->innerJoin('AppBundle:Prefecture', 'p', 'WITH', 'p.id = s.pref_id')
             ->groupBy('p.id')
             ->orderBy('p.id')

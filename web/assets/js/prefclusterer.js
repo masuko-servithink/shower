@@ -219,6 +219,15 @@ PrefClusterer.prototype.extend = function(obj1, obj2) {
   }).apply(obj1, [obj2]);
 };
 
+
+/**
+ * Implementaion of the interface method.
+ * @ignore
+ */
+PrefClusterer.prototype.onAdd = function() {
+  this.setReady_(true);
+};
+
 /**
  * Implementaion of the interface method.
  * @ignore
@@ -391,7 +400,7 @@ PrefClusterer.prototype.getCalculator = function() {
  * @param {Array.<google.maps.Marker>} markers The markers to add.
  * @param {boolean=} opt_nodraw Whether to redraw the clusters.
  */
-PrefClusterer.prototype.addMarkers = function(marker, opt_nodraw) {
+PrefClusterer.prototype.addMarkers = function(markers, opt_nodraw) {
   for (var i = 0, marker; marker = markers[i]; i++) {
     this.pushMarkerTo_(marker);
   }
@@ -480,10 +489,11 @@ PrefClusterer.prototype.removeMarker = function(marker, opt_nodraw) {
   var removed = this.removeMarker_(marker);
 
   if (!opt_nodraw && removed) {
+    this.resetViewport();
     this.redraw();
     return true;
   } else {
-   return false;
+    return false;
   }
 };
 
@@ -630,23 +640,372 @@ PrefClusterer.prototype.getExtendedBounds = function(bounds) {
 
 
 /**
- *  Gets the styles.
+ * Determins if a marker is contained in a bounds.
  *
- *  @return {Object} The styles object.
+ * @param {google.maps.Marker} marker The marker to check.
+ * @param {google.maps.LatLngBounds} bounds The bounds to check against.
+ * @return {boolean} True if the marker is in the bounds.
+ * @private
  */
-PrefClusterer.prototype.getStyles = function() {
-  return this.styles_;
+PrefClusterer.prototype.isMarkerInBounds_ = function(marker, bounds) {
+  return bounds.contains(marker.getPosition());
 };
+
+
+/**
+ * Clears all clusters and markers from the clusterer.
+ */
+PrefClusterer.prototype.clearMarkers = function() {
+  this.resetViewport(true);
+
+  // Set the markers a empty array.
+  this.markers_ = [];
+};
+
+
+/**
+ * Clears all existing clusters and recreates them.
+ * @param {boolean} opt_hide To also hide the marker.
+ */
+PrefClusterer.prototype.resetViewport = function(opt_hide) {
+  // Remove all the clusters
+  for (var i = 0, cluster; cluster = this.clusters_[i]; i++) {
+    cluster.remove();
+  }
+
+  // Reset the markers to not be added and to be invisible.
+  for (var i = 0, marker; marker = this.markers_[i]; i++) {
+    marker.isAdded = false;
+    if (opt_hide) {
+      marker.setMap(null);
+    }
+  }
+
+  this.clusters_ = [];
+};
+
+/**
+ *
+ */
+PrefClusterer.prototype.repaint = function() {
+  var oldClusters = this.clusters_.slice();
+  this.clusters_.length = 0;
+  this.resetViewport();
+  this.redraw();
+
+  // Remove the old clusters.
+  // Do it in a timeout so the other clusters have been drawn first.
+  window.setTimeout(function() {
+    for (var i = 0, cluster; cluster = oldClusters[i]; i++) {
+      cluster.remove();
+    }
+  }, 0);
+};
+
 
 /**
  * Redraws the clusters.
  */
 PrefClusterer.prototype.redraw = function() {
-  this.PrefIcon_ = new PrefIcon(this, this.getStyles(),
-      this.getGridSize());
+  this.createClusters_();
 };
 
-/////////////////////////////////
+
+/**
+ * Calculates the distance between two latlng locations in km.
+ * @see http://www.movable-type.co.uk/scripts/latlong.html
+ *
+ * @param {google.maps.LatLng} p1 The first lat lng point.
+ * @param {google.maps.LatLng} p2 The second lat lng point.
+ * @return {number} The distance between the two points in km.
+ * @private
+ */
+PrefClusterer.prototype.distanceBetweenPoints_ = function(p1, p2) {
+  if (!p1 || !p2) {
+    return 0;
+  }
+
+  var R = 6371; // Radius of the Earth in km
+  var dLat = (p2.lat() - p1.lat()) * Math.PI / 180;
+  var dLon = (p2.lng() - p1.lng()) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(p1.lat() * Math.PI / 180) * Math.cos(p2.lat() * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c;
+  return d;
+};
+
+
+/**
+ * Add a marker to a cluster, or creates a new cluster.
+ *
+ * @param {google.maps.Marker} marker The marker to add.
+ * @private
+ */
+PrefClusterer.prototype.addToClosestCluster_ = function(marker) {
+  var distance = 40000; // Some large number
+  var clusterToAddTo = null;
+  var pos = marker.getPosition();
+  for (var i = 0, cluster; cluster = this.clusters_[i]; i++) {
+    var center = cluster.getCenter();
+    if (center) {
+      var d = this.distanceBetweenPoints_(center, marker.getPosition());
+      if (d < distance) {
+        distance = d;
+        clusterToAddTo = cluster;
+      }
+    }
+  }
+
+  if (clusterToAddTo && clusterToAddTo.isMarkerInClusterBounds(marker)) {
+    clusterToAddTo.addMarker(marker);
+  } else {
+    var PrefCluster = new Cluster(this);
+    PrefCluster.addMarker(marker);
+    this.clusters_.push(cluster);
+  }
+};
+
+
+/**
+ * Creates the clusters.
+ *
+ * @private
+ */
+PrefClusterer.prototype.createClusters_ = function() {
+  if (!this.ready_) {
+    return;
+  }
+
+  // Get our current map view bounds.
+  // Create a new bounds object so we don't affect the map.
+  var mapBounds = new google.maps.LatLngBounds(this.map_.getBounds().getSouthWest(),
+      this.map_.getBounds().getNorthEast());
+  var bounds = this.getExtendedBounds(mapBounds);
+
+  for (var i = 0, marker; marker = this.markers_[i]; i++) {
+    if (!marker.isAdded && this.isMarkerInBounds_(marker, bounds)) {
+      this.addToClosestCluster_(marker);
+    }
+  }
+};
+
+
+/**
+ * A cluster that contains markers.
+ *
+ * @param {PrefClusterer} PrefClusterer The PrefClusterer that this
+ *     cluster is associated with.
+ * @constructor
+ * @ignore
+ */
+function PrefCluster(PrefClusterer) {
+  this.PrefClusterer_ = PrefClusterer;
+  this.map_ = PrefClusterer.getMap();
+  this.gridSize_ = PrefClusterer.getGridSize();
+  this.minClusterSize_ = PrefClusterer.getMinClusterSize();
+  this.averageCenter_ = PrefClusterer.isAverageCenter();
+  this.center_ = null;
+  this.markers_ = [];
+  this.bounds_ = null;
+  this.PrefIcon_ = new PrefIcon(this, PrefClusterer.getStyles(),
+      PrefClusterer.getGridSize());
+}
+
+/**
+ * Determins if a marker is already added to the cluster.
+ *
+ * @param {google.maps.Marker} marker The marker to check.
+ * @return {boolean} True if the marker is already added.
+ */
+PrefCluster.prototype.isMarkerAlreadyAdded = function(marker) {
+  if (this.markers_.indexOf) {
+    return this.markers_.indexOf(marker) != -1;
+  } else {
+    for (var i = 0, m; m = this.markers_[i]; i++) {
+      if (m == marker) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Add a marker the PrefCluster.
+ *
+ * @param {google.maps.Marker} marker The marker to add.
+ * @return {boolean} True if the marker was added.
+ */
+PrefCluster.prototype.addMarker = function(marker) {
+  if (this.isMarkerAlreadyAdded(marker)) {
+    return false;
+  }
+
+  if (!this.center_) {
+    this.center_ = marker.getPosition();
+    this.calculateBounds_();
+  } else {
+    if (this.averageCenter_) {
+      var l = this.markers_.length + 1;
+      var lat = (this.center_.lat() * (l-1) + marker.getPosition().lat()) / l;
+      var lng = (this.center_.lng() * (l-1) + marker.getPosition().lng()) / l;
+      this.center_ = new google.maps.LatLng(lat, lng);
+      this.calculateBounds_();
+    }
+  }
+
+  marker.isAdded = true;
+  this.markers_.push(marker);
+
+  var len = this.markers_.length;
+  if (len < this.minClusterSize_ && marker.getMap() != this.map_) {
+    // Min cluster size not reached so show the marker.
+    marker.setMap(this.map_);
+  }
+
+  if (len == this.minClusterSize_) {
+    // Hide the markers that were showing.
+    for (var i = 0; i < len; i++) {
+      this.markers_[i].setMap(null);
+    }
+  }
+
+  if (len >= this.minClusterSize_) {
+    marker.setMap(null);
+  }
+
+  this.updateIcon();
+  return true;
+};
+
+
+/**
+ * Returns the marker clusterer that the cluster is associated with.
+ *
+ * @return {PrefClusterer} The associated marker clusterer.
+ */
+PrefCluster.prototype.getPrefClusterer = function() {
+  return this.PrefClusterer_;
+};
+
+
+/**
+ * Returns the bounds of the cluster.
+ *
+ * @return {google.maps.LatLngBounds} the cluster bounds.
+ */
+PrefCluster.prototype.getBounds = function() {
+  var bounds = new google.maps.LatLngBounds(this.center_, this.center_);
+  var markers = this.getMarkers();
+  for (var i = 0, marker; marker = markers[i]; i++) {
+    bounds.extend(marker.getPosition());
+  }
+  return bounds;
+};
+
+
+/**
+ * Removes the PrefCluster
+ */
+PrefCluster.prototype.remove = function() {
+  this.PrefIcon_.remove();
+  this.markers_.length = 0;
+  delete this.markers_;
+};
+
+
+/**
+ * Returns the center of the PrefCluster.
+ *
+ * @return {number} The PrefCluster center.
+ */
+PrefCluster.prototype.getSize = function() {
+  return this.markers_.length;
+};
+
+
+/**
+ * Returns the center of the PrefCluster.
+ *
+ * @return {Array.<google.maps.Marker>} The PrefCluster center.
+ */
+PrefCluster.prototype.getMarkers = function() {
+  return this.markers_;
+};
+
+
+/**
+ * Returns the center of the PrefCluster.
+ *
+ * @return {google.maps.LatLng} The PrefCluster center.
+ */
+PrefCluster.prototype.getCenter = function() {
+  return this.center_;
+};
+
+
+/**
+ * Calculated the extended bounds of the PrefCluster with the grid.
+ *
+ * @private
+ */
+PrefCluster.prototype.calculateBounds_ = function() {
+  var bounds = new google.maps.LatLngBounds(this.center_, this.center_);
+  this.bounds_ = this.PrefClusterer_.getExtendedBounds(bounds);
+};
+
+
+/**
+ * Determines if a marker lies in the clusters bounds.
+ *
+ * @param {google.maps.Marker} marker The marker to check.
+ * @return {boolean} True if the marker lies in the bounds.
+ */
+PrefCluster.prototype.isMarkerInClusterBounds = function(marker) {
+  return this.bounds_.contains(marker.getPosition());
+};
+
+
+/**
+ * Returns the map that the PrefCluster is associated with.
+ *
+ * @return {google.maps.Map} The map.
+ */
+PrefCluster.prototype.getMap = function() {
+  return this.map_;
+};
+
+
+/**
+ * Updates the PrefCluster icon
+ */
+PrefCluster.prototype.updateIcon = function() {
+  var zoom = this.map_.getZoom();
+  var mz = this.PrefClusterer_.getMaxZoom();
+
+  if (mz && zoom > mz) {
+    // The zoom is greater than our max zoom so show all the markers in cluster.
+    for (var i = 0, marker; marker = this.markers_[i]; i++) {
+      marker.setMap(this.map_);
+    }
+    return;
+  }
+
+  if (this.markers_.length < this.minClusterSize_) {
+    // Min cluster size not yet reached.
+    this.PrefIcon_.hide();
+    return;
+  }
+
+  var numStyles = this.PrefClusterer_.getStyles().length;
+  var sums = this.PrefClusterer_.getCalculator()(this.markers_, numStyles);
+  this.PrefIcon_.setCenter(this.center_);
+  this.PrefIcon_.setSums(sums);
+  this.PrefIcon_.show();
+};
 
 
 /**
@@ -667,6 +1026,7 @@ PrefClusterer.prototype.redraw = function() {
  * @ignore
  */
 function PrefIcon(cluster, styles, opt_padding) {
+  cluster.getPrefClusterer().extend(PrefIcon, google.maps.OverlayView);
 
   this.styles_ = styles;
   this.padding_ = opt_padding || 0;
@@ -687,12 +1047,12 @@ function PrefIcon(cluster, styles, opt_padding) {
  * @param {google.maps.MouseEvent} event The event to propagate
  */
 PrefIcon.prototype.triggerClusterClick = function(event) {
-  var markerClusterer = this.cluster_.getMarkerClusterer();
+  var PrefClusterer = this.cluster_.getPrefClusterer();
 
   // Trigger the clusterclick event.
-  google.maps.event.trigger(markerClusterer, 'clusterclick', this.cluster_, event);
+  google.maps.event.trigger(PrefClusterer, 'clusterclick', this.cluster_, event);
 
-  if (markerClusterer.isZoomOnClick()) {
+  if (PrefClusterer.isZoomOnClick()) {
     // Zoom into the cluster.
     this.map_.fitBounds(this.cluster_.getBounds());
   }

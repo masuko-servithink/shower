@@ -24,7 +24,7 @@ var ShowerMap = {
     swLatLng:{},
     swLat:{},
     swLng:{},
-    jsonUrl:"http://192.168.33.14/app_dev.php/showers.json",
+    jsonUrl:"http://192.168.160.100/app_dev.php/showers.json",
     jsonData:{},
     boundsData:{},
     mc:{}
